@@ -1,0 +1,48 @@
+ARG image
+FROM ${image}
+
+# Possible image build arguments 
+ARG compile_ncores=8
+ARG ilcinstall_version=master
+ARG ilcinstall_user=iLCSoft
+# LATEST or HEAD
+ARG install_mode=LASTEST
+
+# Clone iLCInstall and compile the base stack
+WORKDIR ${HOME}
+RUN git clone https://github.com/${ilcinstall_user}/iLCInstall.git iLCInstall/ilcsoft --branch ${ilcinstall_version}
+WORKDIR ${HOME}/iLCInstall/ilcsoft
+RUN ./ilcsoft-install -i --install-prefix ${ILCSOFT} -j ${compile_ncores} releases/${install_mode}/release-ilcsoft.cfg
+
+## install Delphes 
+WORKDIR ${HOME}
+
+## Delphes installation 
+RUN wget http://cp3.irmp.ucl.ac.be/downloads/Delphes-3.4.2.tar.gz && \ 
+        tar -zxf Delphes-3.4.2.tar.gz  
+RUN source ilcsoft/v02-01-02/init_ilcsoft.sh && cd Delphes-3.4.2 && make 
+
+## Delphes-to-lcio tool
+WORKDIR ${HOME}
+ENV DELPHES_DIR /home/ilc/Delphes-3.4.2
+#RUN cp -r ilcsoft/v02-01-02/lcio/v02-14-02/examples/cpp/delphes2lcio/ . \
+RUN svn co https://github.com/iLCSoft/LCIO/trunk/examples/cpp/delphes2lcio \
+  && source ilcsoft/v02-01-02/init_ilcsoft.sh \
+  && cd delphes2lcio \
+  && mkdir build \
+  && cd build \
+  && cmake -D LCIO_DIR=$LCIO .. \
+  && make -j 4 install 
+  
+  
+RUN echo "#!/bin/bash" >> $HOME/init_env.sh \
+ && echo "export DELPHES_DIR=/home/ilc/Delphes-3.4.2" >> $HOME/init_env.sh \
+ && echo "export LCIO=/home/ilc/ilcsoft/v02-01-02/lcio/v02-14-02" >> $HOME/init_env.sh \
+ && echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LCIO/lib:$DELPHES_DIR" >> $HOME/init_env.sh \
+ && echo "export PATH=$PATH:/home/ilc/delphes2lcio/build/" >> $HOME/init_env.sh 
+
+
+WORKDIR ${HOME}
+
+# Start the image with BASH by default
+CMD ["/bin/bash"]
