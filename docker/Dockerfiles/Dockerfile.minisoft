@@ -20,7 +20,7 @@ WORKDIR ${HOME}
 ## Delphes installation 
 RUN wget http://cp3.irmp.ucl.ac.be/downloads/Delphes-3.4.2.tar.gz && \ 
         tar -zxf Delphes-3.4.2.tar.gz  
-RUN source ilcsoft/v02-01-02/init_ilcsoft.sh && cd Delphes-3.4.2 && make 
+RUN source ilcsoft/v02-02/init_ilcsoft.sh && cd Delphes-3.4.2 && make 
 
 ## Delphes-to-lcio tool
 WORKDIR ${HOME}
